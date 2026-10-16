@@ -16,14 +16,16 @@
     .number { display: block; color: #a5f3cf; font-size: clamp(45px, 10vw, 88px); line-height: 1.1; font-weight: 750; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
     .label { display: block; margin-top: 12px; font-size: 14px; color: #b4bfd6; }
     .deadline { margin: 28px 0 0; color: #b4bfd6; font-size: 14px; line-height: 1.7; }
-    .semester { margin: 28px auto 0; max-width: 560px; padding: 20px; background: #ffffff08; border: 1px solid #ffffff1c; border-radius: 18px; }
+    .semester { margin: 28px auto 0; max-width: 650px; padding: 20px; background: #ffffff08; border: 1px solid #ffffff1c; border-radius: 18px; }
     .semester-text { margin: 0 0 12px; color: #e0e8f9; font-size: 16px; }
     .progress-track { height: 12px; overflow: hidden; background: #ffffff12; border-radius: 999px; }
     .progress-bar { width: 0; height: 100%; background: linear-gradient(90deg, #66d9ad, #a5f3cf); border-radius: inherit; transition: width .5s ease; }
-    .semester-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 14px; }
+    .semester-stats { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 12px; margin-top: 14px; }
     .stat { margin: 0; padding: 13px 10px; color: #b4bfd6; background: #ffffff08; border-radius: 12px; font-size: 14px; }
     .stat strong { display: block; margin-bottom: 3px; color: #a5f3cf; font-size: 22px; }
+    #wastedMoney { white-space: nowrap; }
     .message { margin-top: 38px; font-size: 18px; color: #e0e8f9; }
+    @media (max-width: 600px) { .semester-stats { grid-template-columns: 1fr; } }
     @media (max-width: 420px) { .timer { grid-template-columns: repeat(2, 1fr); gap: 8px; } .unit { padding: 24px 6px; border-radius: 16px; } }
     @media (prefers-reduced-motion: no-preference) { main { animation: appear .6s ease-out; } @keyframes appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } } }
   </style>
@@ -47,6 +49,7 @@
       <div class="semester-stats">
         <p class="stat"><strong id="elapsedDays">0 nap</strong>telt el szeptember 7. óta</p>
         <p class="stat"><strong id="teachingWeek">1. hét</strong>aktuális tanítási hét</p>
+        <p class="stat"><strong id="wastedMoney">0,00 Ft</strong>a 420 000 Ft-os félévből elvesztegetve</p>
       </div>
     </section>
     <p class="message" id="message" role="status">Menni fog, Márk! 🎓</p>
@@ -56,6 +59,8 @@
     // Magyar idő szerint decemberben UTC+1 van.
     const deadline = new Date('2026-12-06T12:00:00+01:00').getTime();
     const semesterStart = new Date('2026-09-07T00:00:00+02:00').getTime();
+    // 240 000 Ft alapdíj + 15 kredit × 12 000 Ft/kredit.
+    const diplomaCourseCost = 420000;
     const days = document.getElementById('days');
     const hours = document.getElementById('hours');
     const minutes = document.getElementById('minutes');
@@ -66,6 +71,11 @@
     const progressTrack = document.querySelector('.progress-track');
     const elapsedDays = document.getElementById('elapsedDays');
     const teachingWeek = document.getElementById('teachingWeek');
+    const wastedMoney = document.getElementById('wastedMoney');
+    const moneyFormatter = new Intl.NumberFormat('hu-HU', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
     function updateCountdown() {
       const remaining = Math.max(0, deadline - Date.now());
       const totalSeconds = Math.ceil(remaining / 1000);
@@ -75,14 +85,16 @@
       minutes.textContent = String(totalMinutes % 60).padStart(2, '0');
       seconds.textContent = String(totalSeconds % 60).padStart(2, '0');
       const semesterProgressValue = Math.min(100, Math.max(0, ((Date.now() - semesterStart) / (deadline - semesterStart)) * 100));
-      const roundedProgress = semesterProgressValue.toFixed(1);
-      semesterPercent.textContent = `${roundedProgress}%`;
+      const roundedProgress = semesterProgressValue.toFixed(6);
+      semesterPercent.textContent = `${roundedProgress.replace('.', ',')}%`;
       semesterProgress.style.width = `${semesterProgressValue}%`;
       progressTrack.setAttribute('aria-valuenow', roundedProgress);
       const daysSinceStart = Math.max(0, Math.floor((Date.now() - semesterStart) / 86400000));
       const currentTeachingWeek = Math.max(1, Math.floor(daysSinceStart / 7) + 1);
       elapsedDays.textContent = `${daysSinceStart} nap`;
       teachingWeek.textContent = `${currentTeachingWeek}. hét`;
+      const wastedAmount = diplomaCourseCost * (semesterProgressValue / 100);
+      wastedMoney.textContent = `${moneyFormatter.format(wastedAmount)} Ft`;
       if (remaining === 0) {
         message.textContent = 'Elérkezett a leadás ideje, Márk! 🎓';
       }
