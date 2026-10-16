@@ -11,12 +11,18 @@
     main { width: min(760px, 100%); text-align: center; }
     .badge { display: inline-block; padding: 9px 15px; border: 1px solid #ffffff26; border-radius: 100px; color: #b8c9ef; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; }
     h1 { font-size: clamp(34px, 7vw, 62px); line-height: 1.12; margin: 25px 0 15px; letter-spacing: -.045em; }
-    .intro { color: #b4bfd6; font-size: 18px; line-height: 1.6; margin: 0 0 36px; }
     .timer { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
     .unit { background: #ffffff08; border: 1px solid #ffffff1c; border-radius: 22px; padding: 28px 10px; box-shadow: 0 16px 45px #00000018; }
     .number { display: block; color: #a5f3cf; font-size: clamp(45px, 10vw, 88px); line-height: 1.1; font-weight: 750; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
     .label { display: block; margin-top: 12px; font-size: 14px; color: #b4bfd6; }
     .deadline { margin: 28px 0 0; color: #b4bfd6; font-size: 14px; line-height: 1.7; }
+    .semester { margin: 28px auto 0; max-width: 560px; padding: 20px; background: #ffffff08; border: 1px solid #ffffff1c; border-radius: 18px; }
+    .semester-text { margin: 0 0 12px; color: #e0e8f9; font-size: 16px; }
+    .progress-track { height: 12px; overflow: hidden; background: #ffffff12; border-radius: 999px; }
+    .progress-bar { width: 0; height: 100%; background: linear-gradient(90deg, #66d9ad, #a5f3cf); border-radius: inherit; transition: width .5s ease; }
+    .semester-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 14px; }
+    .stat { margin: 0; padding: 13px 10px; color: #b4bfd6; background: #ffffff08; border-radius: 12px; font-size: 14px; }
+    .stat strong { display: block; margin-bottom: 3px; color: #a5f3cf; font-size: 22px; }
     .message { margin-top: 38px; font-size: 18px; color: #e0e8f9; }
     @media (max-width: 420px) { .timer { grid-template-columns: repeat(2, 1fr); gap: 8px; } .unit { padding: 24px 6px; border-radius: 16px; } }
     @media (prefers-reduced-motion: no-preference) { main { animation: appear .6s ease-out; } @keyframes appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } } }
@@ -26,25 +32,40 @@
   <main>
     <span class="badge">A nagy leadásig</span>
     <h1>Márk, ennyi időd van<br>a diplomád leadásáig.</h1>
-    <p class="intro">Minden perc egy lépéssel közelebb a kész diplomához.</p>
     <div class="timer" role="timer" aria-label="Hátralévő idő a diploma leadásáig">
       <div class="unit"><span class="number" id="days">–</span><span class="label">nap</span></div>
       <div class="unit"><span class="number" id="hours">–</span><span class="label">óra</span></div>
       <div class="unit"><span class="number" id="minutes">–</span><span class="label">perc</span></div>
       <div class="unit"><span class="number" id="seconds">–</span><span class="label">másodperc</span></div>
     </div>
-    <p class="deadline">Határidő: <time datetime="2026-12-06T12:00:00+01:00">2026. december 6., 12:00</time><br>Magyar idő szerint</p>
+    <p class="deadline">Határidő: <time datetime="2026-12-06T12:00:00+01:00">2026. december 6., 12:00</time></p>
+    <section class="semester" aria-label="A félév előrehaladása">
+      <p class="semester-text">A félév <strong id="semesterPercent">0%</strong>-ánál tartunk.</p>
+      <div class="progress-track" role="progressbar" aria-label="A félév előrehaladása" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="progress-bar" id="semesterProgress"></div>
+      </div>
+      <div class="semester-stats">
+        <p class="stat"><strong id="elapsedDays">0 nap</strong>telt el szeptember 7. óta</p>
+        <p class="stat"><strong id="teachingWeek">1. hét</strong>aktuális tanítási hét</p>
+      </div>
+    </section>
     <p class="message" id="message" role="status">Menni fog, Márk! 🎓</p>
     <noscript>A visszaszámlálóhoz engedélyezd a JavaScriptet a böngésződben.</noscript>
   </main>
   <script>
     // Magyar idő szerint decemberben UTC+1 van.
     const deadline = new Date('2026-12-06T12:00:00+01:00').getTime();
+    const semesterStart = new Date('2026-09-07T00:00:00+02:00').getTime();
     const days = document.getElementById('days');
     const hours = document.getElementById('hours');
     const minutes = document.getElementById('minutes');
     const seconds = document.getElementById('seconds');
     const message = document.getElementById('message');
+    const semesterPercent = document.getElementById('semesterPercent');
+    const semesterProgress = document.getElementById('semesterProgress');
+    const progressTrack = document.querySelector('.progress-track');
+    const elapsedDays = document.getElementById('elapsedDays');
+    const teachingWeek = document.getElementById('teachingWeek');
     function updateCountdown() {
       const remaining = Math.max(0, deadline - Date.now());
       const totalSeconds = Math.ceil(remaining / 1000);
@@ -53,6 +74,15 @@
       hours.textContent = String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0');
       minutes.textContent = String(totalMinutes % 60).padStart(2, '0');
       seconds.textContent = String(totalSeconds % 60).padStart(2, '0');
+      const semesterProgressValue = Math.min(100, Math.max(0, ((Date.now() - semesterStart) / (deadline - semesterStart)) * 100));
+      const roundedProgress = semesterProgressValue.toFixed(1);
+      semesterPercent.textContent = `${roundedProgress}%`;
+      semesterProgress.style.width = `${semesterProgressValue}%`;
+      progressTrack.setAttribute('aria-valuenow', roundedProgress);
+      const daysSinceStart = Math.max(0, Math.floor((Date.now() - semesterStart) / 86400000));
+      const currentTeachingWeek = Math.max(1, Math.floor(daysSinceStart / 7) + 1);
+      elapsedDays.textContent = `${daysSinceStart} nap`;
+      teachingWeek.textContent = `${currentTeachingWeek}. hét`;
       if (remaining === 0) {
         message.textContent = 'Elérkezett a leadás ideje, Márk! 🎓';
       }
