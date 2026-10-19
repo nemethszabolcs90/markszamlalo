@@ -20,10 +20,16 @@
     .semester-text { margin: 0 0 12px; color: #e0e8f9; font-size: 16px; }
     .progress-track { height: 12px; overflow: hidden; background: #ffffff12; border-radius: 999px; }
     .progress-bar { width: 0; height: 100%; background: linear-gradient(90deg, #66d9ad, #a5f3cf); border-radius: inherit; transition: width .5s ease; }
-    .semester-stats { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 12px; margin-top: 14px; }
+    .semester-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 14px; }
     .stat { margin: 0; padding: 13px 10px; color: #b4bfd6; background: #ffffff08; border-radius: 12px; font-size: 14px; }
     .stat strong { display: block; margin-bottom: 3px; color: #a5f3cf; font-size: 22px; }
     #wastedMoney { white-space: nowrap; }
+    .edit-pages { margin-top: 9px; padding: 7px 11px; border: 1px solid #ffffff26; border-radius: 999px; background: #ffffff0d; color: #e0e8f9; font: inherit; cursor: pointer; }
+    .edit-pages:hover { background: #ffffff18; }
+    .pages-form { display: flex; gap: 7px; margin-top: 9px; }
+    .pages-form[hidden] { display: none; }
+    .pages-form input { min-width: 0; width: 100%; padding: 8px 10px; border: 1px solid #ffffff26; border-radius: 9px; background: #0b1020; color: #f5f7ff; font: inherit; }
+    .pages-form button { padding: 8px 11px; border: 0; border-radius: 9px; background: #a5f3cf; color: #0b1020; font-weight: 700; cursor: pointer; }
     .message { margin-top: 38px; font-size: 18px; color: #e0e8f9; }
     @media (max-width: 600px) { .semester-stats { grid-template-columns: 1fr; } }
     @media (max-width: 420px) { .timer { grid-template-columns: repeat(2, 1fr); gap: 8px; } .unit { padding: 24px 6px; border-radius: 16px; } }
@@ -49,7 +55,16 @@
       <div class="semester-stats">
         <p class="stat"><strong id="elapsedDays">0 nap</strong>telt el szeptember 7. óta</p>
         <p class="stat"><strong id="teachingWeek">1. hét</strong>aktuális tanítási hét</p>
-        <p class="stat"><strong id="wastedMoney">0,00 Ft</strong>a 420 000 Ft-os félévből elvesztegetve</p>
+        <p class="stat"><strong id="wastedMoney">0,00 Ft</strong>a 350 000 Ft-os félévből elvesztegetve</p>
+        <div class="stat">
+          <strong id="pagesPerDay">0,00 oldal/nap</strong>
+          ha még <span id="targetPagesText">60</span> oldalt akarsz írni
+          <button class="edit-pages" id="editPages" type="button" aria-expanded="false">Oldalszám módosítása</button>
+          <form class="pages-form" id="pagesForm" hidden>
+            <input id="pagesInput" type="number" min="1" max="9999" step="1" inputmode="numeric" aria-label="Hátralévő oldalak száma" required>
+            <button type="submit">Mentés</button>
+          </form>
+        </div>
       </div>
     </section>
     <p class="message" id="message" role="status">Menni fog, Márk! 🎓</p>
@@ -59,8 +74,7 @@
     // Magyar idő szerint decemberben UTC+1 van.
     const deadline = new Date('2026-12-06T12:00:00+01:00').getTime();
     const semesterStart = new Date('2026-09-07T00:00:00+02:00').getTime();
-    // 240 000 Ft alapdíj + 15 kredit × 12 000 Ft/kredit.
-    const diplomaCourseCost = 420000;
+    const diplomaCourseCost = 350000;
     const days = document.getElementById('days');
     const hours = document.getElementById('hours');
     const minutes = document.getElementById('minutes');
@@ -72,6 +86,19 @@
     const elapsedDays = document.getElementById('elapsedDays');
     const teachingWeek = document.getElementById('teachingWeek');
     const wastedMoney = document.getElementById('wastedMoney');
+    const pagesPerDay = document.getElementById('pagesPerDay');
+    const targetPagesText = document.getElementById('targetPagesText');
+    const editPages = document.getElementById('editPages');
+    const pagesForm = document.getElementById('pagesForm');
+    const pagesInput = document.getElementById('pagesInput');
+    let targetPages = 60;
+    try {
+      const savedPages = Number(localStorage.getItem('markTargetPages'));
+      if (Number.isFinite(savedPages) && savedPages > 0) targetPages = savedPages;
+    } catch (error) {}
+    targetPagesText.textContent = targetPages;
+    pagesInput.value = targetPages;
+    let pagesLastUpdated = '';
     const moneyFormatter = new Intl.NumberFormat('hu-HU', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -95,10 +122,37 @@
       teachingWeek.textContent = `${currentTeachingWeek}. hét`;
       const wastedAmount = diplomaCourseCost * (semesterProgressValue / 100);
       wastedMoney.textContent = `${moneyFormatter.format(wastedAmount)} Ft`;
+      const now = new Date();
+      const currentDate = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      if (currentDate !== pagesLastUpdated) {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const remainingDays = Math.max(0, (deadline - startOfToday) / 86400000);
+        const requiredPagesPerDay = remainingDays > 0 ? targetPages / remainingDays : targetPages;
+        pagesPerDay.textContent = `${requiredPagesPerDay.toFixed(2).replace('.', ',')} oldal/nap`;
+        pagesLastUpdated = currentDate;
+      }
       if (remaining === 0) {
         message.textContent = 'Elérkezett a leadás ideje, Márk! 🎓';
       }
     }
+    editPages.addEventListener('click', () => {
+      const willOpen = pagesForm.hidden;
+      pagesForm.hidden = !willOpen;
+      editPages.setAttribute('aria-expanded', String(willOpen));
+      if (willOpen) pagesInput.focus();
+    });
+    pagesForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const newTarget = Number(pagesInput.value);
+      if (!Number.isFinite(newTarget) || newTarget <= 0) return;
+      targetPages = newTarget;
+      targetPagesText.textContent = targetPages;
+      try { localStorage.setItem('markTargetPages', String(targetPages)); } catch (error) {}
+      pagesLastUpdated = '';
+      pagesForm.hidden = true;
+      editPages.setAttribute('aria-expanded', 'false');
+      updateCountdown();
+    });
     updateCountdown();
     setInterval(updateCountdown, 1000);
   </script>
