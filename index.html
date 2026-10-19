@@ -7,8 +7,10 @@
   <title>Márk diploma-visszaszámlálója</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 28px 18px; background: radial-gradient(ellipse at top, #273759, #0b1020 70%); color: #f5f7ff; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    main { width: min(760px, 100%); text-align: center; }
+    body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 72px 18px 28px; background: radial-gradient(ellipse at top, #273759, #0b1020 70%); color: #f5f7ff; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; transition: background .45s ease, color .45s ease; }
+    main { position: relative; z-index: 1; width: min(760px, 100%); text-align: center; }
+    .theme-toggle { position: fixed; z-index: 10; top: 18px; right: 18px; padding: 10px 15px; border: 1px solid #ffffff2d; border-radius: 999px; background: #ffffff10; color: #f5f7ff; box-shadow: 0 8px 28px #00000025; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; backdrop-filter: blur(12px); transition: transform .2s ease, background .3s ease, color .3s ease; }
+    .theme-toggle:hover { transform: translateY(-2px) scale(1.02); }
     .badge { display: inline-block; padding: 9px 15px; border: 1px solid #ffffff26; border-radius: 100px; color: #b8c9ef; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; }
     h1 { font-size: clamp(34px, 7vw, 62px); line-height: 1.12; margin: 25px 0 15px; letter-spacing: -.045em; }
     .timer { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
@@ -31,12 +33,50 @@
     .pages-form input { min-width: 0; width: 100%; padding: 8px 10px; border: 1px solid #ffffff26; border-radius: 9px; background: #0b1020; color: #f5f7ff; font: inherit; }
     .pages-form button { padding: 8px 11px; border: 0; border-radius: 9px; background: #a5f3cf; color: #0b1020; font-weight: 700; cursor: pointer; }
     .message { margin-top: 38px; font-size: 18px; color: #e0e8f9; }
+    body.pink-theme { background: radial-gradient(circle at 20% 10%, #ffd6ed, transparent 34%), radial-gradient(circle at 85% 20%, #ff9fd2, transparent 38%), linear-gradient(145deg, #ffb9df, #e96db1 52%, #b93f8b); color: #5e1645; }
+    body.pink-theme::before, body.pink-theme::after { position: fixed; z-index: 0; pointer-events: none; color: #ffffffa8; font-size: clamp(70px, 12vw, 150px); filter: drop-shadow(0 10px 20px #aa276c44); }
+    body.pink-theme::before { content: '♡ ✦'; top: 10%; left: 3%; transform: rotate(-12deg); }
+    body.pink-theme::after { content: '✧ ♡'; right: 3%; bottom: 6%; transform: rotate(10deg); }
+    .pink-decor { display: none; }
+    .pink-theme .pink-decor { display: block; position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .pink-decor span { position: absolute; opacity: .68; filter: drop-shadow(0 7px 12px #8b1f6345); animation: pinkFloat 4.5s ease-in-out infinite alternate; }
+    .pink-decor span:nth-child(1) { top: 5%; left: 18%; font-size: 42px; }
+    .pink-decor span:nth-child(2) { top: 22%; right: 7%; font-size: 52px; animation-delay: -.8s; }
+    .pink-decor span:nth-child(3) { top: 38%; left: 4%; font-size: 38px; animation-delay: -1.7s; }
+    .pink-decor span:nth-child(4) { top: 55%; right: 4%; font-size: 46px; animation-delay: -2.4s; }
+    .pink-decor span:nth-child(5) { bottom: 10%; left: 15%; font-size: 56px; animation-delay: -1.1s; }
+    .pink-decor span:nth-child(6) { bottom: 4%; left: 42%; font-size: 33px; animation-delay: -3s; }
+    .pink-decor span:nth-child(7) { top: 12%; right: 27%; font-size: 30px; animation-delay: -2s; }
+    .pink-decor span:nth-child(8) { bottom: 28%; left: 5%; font-size: 44px; animation-delay: -.3s; }
+    .pink-decor span:nth-child(9) { top: 68%; right: 18%; font-size: 36px; animation-delay: -2.8s; }
+    .pink-decor span:nth-child(10) { top: 3%; right: 47%; font-size: 28px; animation-delay: -1.4s; }
+    .pink-decor span:nth-child(11) { bottom: 18%; right: 3%; font-size: 48px; animation-delay: -3.5s; }
+    .pink-decor span:nth-child(12) { top: 47%; left: 17%; font-size: 31px; animation-delay: -.6s; }
+    @keyframes pinkFloat { from { transform: translateY(-5px) rotate(-6deg) scale(.96); } to { transform: translateY(12px) rotate(8deg) scale(1.08); } }
+    .pink-theme .theme-toggle { border-color: #ffffff9c; background: #fff0f8d9; color: #9f246c; }
+    .pink-theme .badge { border-color: #ffffffa8; background: #ffffff42; color: #8a205f; }
+    .pink-theme .unit, .pink-theme .semester { border-color: #ffffff85; background: #fff5fac4; box-shadow: 0 18px 45px #8b1f6333; }
+    .pink-theme .stat { background: #f99bcd4a; color: #7e285e; }
+    .pink-theme .number, .pink-theme .stat strong { color: #c1267d; text-shadow: 0 2px 0 #fff; }
+    .pink-theme .label, .pink-theme .deadline, .pink-theme .semester-text, .pink-theme .message { color: #681b4c; }
+    .pink-theme .progress-track { background: #c64a8e2e; }
+    .pink-theme .progress-bar { background: linear-gradient(90deg, #f23d9b, #ff91ca, #fff0f8); }
+    .pink-theme .edit-pages { border-color: #c43d8855; background: #ffffff8c; color: #8f2565; }
+    .pink-theme .pages-form input { border-color: #d5529a66; background: #fff7fb; color: #681b4c; }
+    .pink-theme .pages-form button { background: #c72a80; color: #fff; }
     @media (max-width: 600px) { .semester-stats { grid-template-columns: 1fr; } }
     @media (max-width: 420px) { .timer { grid-template-columns: repeat(2, 1fr); gap: 8px; } .unit { padding: 24px 6px; border-radius: 16px; } }
+    @media (prefers-reduced-motion: reduce) { .pink-decor span { animation: none; } }
     @media (prefers-reduced-motion: no-preference) { main { animation: appear .6s ease-out; } @keyframes appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } } }
   </style>
 </head>
 <body>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false">💖 Ahogy Márk szereti</button>
+  <div class="pink-decor" aria-hidden="true">
+    <span>💗</span><span>🎀</span><span>🌸</span><span>💖</span>
+    <span>🩷</span><span>✨</span><span>💕</span><span>🌷</span>
+    <span>💓</span><span>🎀</span><span>🌺</span><span>💞</span>
+  </div>
   <main>
     <span class="badge">A nagy leadásig</span>
     <h1>Márk, ennyi időd van<br>a diplomád leadásáig.</h1>
@@ -75,6 +115,20 @@
     const deadline = new Date('2026-12-06T12:00:00+01:00').getTime();
     const semesterStart = new Date('2026-09-07T00:00:00+02:00').getTime();
     const diplomaCourseCost = 350000;
+    const themeToggle = document.getElementById('themeToggle');
+    let pinkThemeEnabled = false;
+    try { pinkThemeEnabled = localStorage.getItem('markPinkTheme') === 'true'; } catch (error) {}
+    function applyTheme() {
+      document.body.classList.toggle('pink-theme', pinkThemeEnabled);
+      themeToggle.setAttribute('aria-pressed', String(pinkThemeEnabled));
+      themeToggle.textContent = pinkThemeEnabled ? '🌙 Eredeti téma' : '💖 Ahogy Márk szereti';
+    }
+    applyTheme();
+    themeToggle.addEventListener('click', () => {
+      pinkThemeEnabled = !pinkThemeEnabled;
+      try { localStorage.setItem('markPinkTheme', String(pinkThemeEnabled)); } catch (error) {}
+      applyTheme();
+    });
     const days = document.getElementById('days');
     const hours = document.getElementById('hours');
     const minutes = document.getElementById('minutes');
